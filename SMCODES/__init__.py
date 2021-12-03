@@ -1,2 +1,3 @@
 from .chebutils import *
-from.core import *
+from .funtils import *
+from .core import *

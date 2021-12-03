@@ -12,7 +12,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import minimize
 
-from chebutils import chebdiff
+from .chebutils import chebdiff
 
 
 class ChebProblem(object):
@@ -66,9 +66,10 @@ class ChebProblem(object):
         # But this will give us a decent start for the adaptive last step
 
         # Now we handle the nonlinear equation
+        np.set_printoptions(precision=16)
         soln = minimize(lambda x: np.linalg.norm((self.f(x) - c2 - x * D[-1, -1])),
                         x0=sol_upper, method='Nelder-Mead',
-                        options={"disp": True, "xatol": 1e-14, "fatol": 1e-14, "maxiter": 500})
+                        options={"disp": False, "xatol": 1e-14, "fatol": 1e-14, "maxiter": 500})
         # c + ax = f(x) => x = (f(x) - a)/c
         # These tolerances are aggressive at 1e-12, but we're going for broke!
         # Golden might be more efficient if we could work out the bounds,
@@ -99,11 +100,15 @@ class ChebProblem(object):
         return self.solve()
 
 
-class SMCODES(object):
+class SmcSolver(object):
     def __init__(self, fun: typing.Callable, u0: float, hstep: float, t0:float=0, stages: int = 2):
+        """ Get usual suspects for an ODE solver routine. """
         self.stages = stages
         self.Dmats = {}
         self.xnodes = {}
+        self.u0 = np.asarray(u0)  # convert it now
+        self.hstep = hstep
+        self.f = fun  # the function to solve u' = f(u)
         for idx in range(1, self.stages + 1):
             # build spectral diff mat + points on [0,1] - rescale on the fly
             D, x = chebdiff(n=idx, h=0.5, use_numba=True, flip=True)
@@ -111,20 +116,26 @@ class SMCODES(object):
             self.xnodes[idx] = x + 0.5
         self.main_problem = None
         self.t = t0
+        self.times = None
 
     def _solve(self):
         """ Run the solver for 1 step. Does not update the problem For debug purposes primarily. """
-        self.main_problem = ChebProblem(f=fun, degree=stages, u0=self.u0, xnodes=self.xnodes,
+        self.main_problem = ChebProblem(f=self.f, degree=self.stages,
+                                        u0=self.u0, xnodes=self.xnodes,
                                         diffmatDict=self.Dmats, h=self.hstep)
         return self.main_problem.recursive_solve_subproblems()
 
     def solve(self, tmax=1):
         uvals = [self.u0]
+        self.times = [self.t]
         while self.t < tmax:
-            self.main_problem = ChebProblem(f=fun, degree=stages, u0=uvals[-1], xnodes=self.xnodes,
+            # setup a new problem
+            self.main_problem = ChebProblem(f=self.f, degree=self.stages,
+                                            u0=uvals[-1], xnodes=self.xnodes,
                                             diffmatDict=self.Dmats, h=self.hstep)
-            self.t += self.h
+            self.t += self.hstep  # move forward time
             unew = self.main_problem.recursive_solve_subproblems()
             uvals.append(unew)
-        return np.asarray(uvals)
+            self.times.append(self.t)
 
+        return np.array(self.times), np.asarray(uvals)
