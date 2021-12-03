@@ -10,7 +10,7 @@ def chebdiff(n: int = 2, h: float = 1, use_numba: bool = False, flip: bool = Fal
     """
     Obtains the chebyshev differentiation matrix and chebyshev points
     on the rescaled interval $[-h,h]$. By default, $h=1$ and we obtain the
-    "canonical" differentiation matrix.
+    "canonical" differentiation matrix.cl
 
     Handles type checking before dispatching a call to a numba compiled function
 
@@ -24,8 +24,8 @@ def chebdiff(n: int = 2, h: float = 1, use_numba: bool = False, flip: bool = Fal
         D, x = _chebdiff_n(n, h)
     else:  # No Python mode
         D, x = _chebdiff(n, h)
-    if flip:  # Flip it so we get increasing order
-        D = np.flipud(D)
+    if flip:  # Flip it so we get nodes in increasing order
+        # D = np.flipud(D)  # TODO - check the symmetries here
         x = np.flip(x)
     return D, x
 
