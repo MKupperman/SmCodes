@@ -2,18 +2,16 @@
 
 _Cade Ballew, Michael Kupperman_  Amath 570
 
-A python implementation of SMCODES, a diagonally-implicit time-stepping method with spectral flair.
+A python implementation of SMCODES, a semi-implicit time-stepping method with spectral flair.
 
 
+A minimal example:
 
 ```python
 from SMCODES import SmcSolver
 
 testfun = lambda x: - x
-tmax = 1
-h = 0.1
-y0 = 0
+smc = SmcSolver(f, u0=1, hstep=1e-1, stages=4, do_implicit_solve=True)
+times, soln = smc.solve()
 
-smc = SmcSolver(fun=testfun, u0=1, hstep=hstep, stages=stage)
-t, y = smc.solve(tmax=tmax)
 ```
